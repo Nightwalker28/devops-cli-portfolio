@@ -4,16 +4,31 @@ const TerminalOutput = ({ history }: { history: string[] }) => {
   return (
     <>
       {history.map((line, idx) => {
-        if (line.includes('/') && !line.includes('$')) {
+        // If it's a horizontal listing line (e.g., from 'ls')
+        if (!line.includes('$') && line.includes('  ')) {
           return (
-            <div key={idx} className="text-cyan-400">{line}</div>
+            <div key={idx}>
+              {line.split('  ').map((item, i) => {
+                const isFile = item.includes('.');
+                const isYaml = item.endsWith('.yaml');
+                const isMd = item.endsWith('.md');
+                const colorClass = isFile
+                  ? isYaml || isMd
+                    ? 'text-yellow-400'
+                    : 'text-white'
+                  : 'text-cyan-400';
+
+                return (
+                  <span key={i} className={`${colorClass} mr-4`}>
+                    {item}
+                  </span>
+                );
+              })}
+            </div>
           );
         }
-        if (line.includes('.md') || line.includes('.yaml')) {
-          return (
-            <div key={idx} className="text-yellow-400">{line}</div>
-          );
-        }
+
+        // All other outputs (commands, help, errors)
         return <div key={idx}>{line}</div>;
       })}
     </>

@@ -21,21 +21,70 @@ const TerminalShell = () => {
         setNanoContent(null);
       }
     };
+
+    const handleTouch = () => {
+      if (nanoContent) {
+        setNanoContent(null);
+      }
+    };
+
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    window.addEventListener('touchstart', handleTouch);
+
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('touchstart', handleTouch);
+    };
   }, [nanoContent]);
+
+  useEffect(() => {
+    const init = async () => {
+      const { output } = await processCommand('ls', '/');
+      setHistory((prev) => [...prev, ...output]);
+    };
+    init();
+  }, []);
 
   const handleCommand = async (input: string) => {
     const { output, newCwd, nano } = await processCommand(input, cwd);
     const prompt = `nightwalker28@nightwalkerslenovo:${cwd === '/' ? '~' : `~${cwd}`}$ ${input}`;
-    setHistory((prev) => [...prev, prompt, ...output]);
+    let nextHistory = [...history, prompt, ...output];
+
+    if (newCwd && newCwd !== cwd) {
+      const lsResult = await processCommand('ls', newCwd);
+      nextHistory = [...nextHistory, ...lsResult.output];
+    }
+
+    setHistory(nextHistory);
     setCommandHistory((prev) => [...prev, input]);
     if (newCwd !== undefined) setCwd(newCwd);
     if (nano) setNanoContent(nano);
   };
 
+  const handleTouchOutput = async (text: string) => {
+    if (!text || nanoContent) return;
+
+    const segments = text.trim().split(/\s+/);
+    for (const seg of segments) {
+      if (fileTree[cwd]?.some(f => f.name === seg)) {
+        const fileObj = fileTree[cwd].find(f => f.name === seg);
+        if (fileObj?.type === 'folder') {
+          await handleCommand(`cd ${seg}`);
+        } else if (fileObj?.type === 'file') {
+          await handleCommand(`view ${seg}`);
+        }
+      }
+    }
+  };
+
   return (
-    <div className="bg-black text-green-400 font-mono p-4 h-screen overflow-y-auto">
+    <div
+      className="bg-black text-green-400 font-mono p-4 h-screen overflow-y-auto"
+      onClick={(e) => {
+        const text = (e.target as HTMLElement).innerText;
+        handleTouchOutput(text);
+      }}
+    >
       {nanoContent ? (
         <div className="border border-green-400 p-4 mb-4">
           <div className="mb-2">-- NANO: {nanoContent[0]}</div>
@@ -44,7 +93,7 @@ const TerminalShell = () => {
               <div key={idx} className="text-white">{line}</div>
             ))}
           </pre>
-          <div className="mt-4 text-yellow-400">(Press Ctrl+X to exit nano)</div>
+          <div className="mt-4 text-yellow-400">(Press Ctrl+X or tap anywhere to exit nano)</div>
         </div>
       ) : (
         <>

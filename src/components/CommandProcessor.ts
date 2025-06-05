@@ -4,6 +4,7 @@ export type FileEntry = {
   type: 'file' | 'folder';
   ext?: string;
   content?: string[];
+  blogUrl?: string; // for visual view toggle
 };
 
 export const fileTree: Record<string, FileEntry[]> = {
@@ -56,6 +57,7 @@ export const processCommand = async (cmd: string, cwd: string) => {
       '  ls                 - List directory contents',
       '  cat <file>         - View file content',
       '  nano <file>        - Open file in nano view',
+      '  view <file>        - Open file visually in browser',
       '  clear              - Clear the screen',
       '  help               - Show this help',
     ];
@@ -70,24 +72,31 @@ export const processCommand = async (cmd: string, cwd: string) => {
       newCwd = fullPath;
       if (fullPath === '/blogs' && fileTree['/blogs'].length === 0) {
         try {
-          const fetchFn = typeof fetch !== 'undefined' ? fetch : (await import('node-fetch')).default;
-          const res = await fetchFn('https://dev.to/api/articles?username=nightwalker28', {
-            headers: { 'accept': 'application/json' },
-          });
+          const res = await fetch('/api/devto');
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const articles = await res.json();
-          const blogFiles = articles.map((article: any): FileEntry => ({
-            name: `${article.slug}.md`,
-            type: 'file',
-            ext: 'md',
-            content: [
-              `# ${article.title}`,
-              '',
-              ...article.body_markdown.split('\n').slice(0, 20),
-              '',
-              `Read more: ${article.url}`,
-            ],
-          }));
+          const blogFiles: FileEntry[] = [];
+
+          for (const article of articles) {
+            const detailRes = await fetch(`https://dev.to/api/articles/${article.id}`);
+            if (!detailRes.ok) continue;
+            const detail = await detailRes.json();
+
+            blogFiles.push({
+              name: `${article.slug}.md`,
+              type: 'file',
+              ext: 'md',
+              blogUrl: article.url,
+              content: [
+                `# ${article.title}`,
+                '',
+                ...detail.body_markdown?.split('\n') || ['(No content)'],
+                '',
+                `Read more: ${article.url}`,
+              ],
+            });
+          }
+
           fileTree['/blogs'] = blogFiles;
         } catch (e: any) {
           output = [`Failed to fetch blogs from Dev.to: ${e.message}`];
@@ -96,19 +105,25 @@ export const processCommand = async (cmd: string, cwd: string) => {
     } else {
       output = [`cd: ${target}: Not a directory`];
     }
-  } else if (trimmed.startsWith('cat ') || trimmed.startsWith('nano ')) {
+  } else if (trimmed.startsWith('cat ') || trimmed.startsWith('nano ') || trimmed.startsWith('view ')) {
     const isNano = trimmed.startsWith('nano ');
-    const target = trimmed.slice(isNano ? 5 : 4).trim();
+    const isView = trimmed.startsWith('view ');
+    const target = trimmed.slice(isNano ? 5 : isView ? 5 : 4).trim();
     const entries = fileTree[cwd] || [];
     const file = entries.find((f) => f.name === target && f.type === 'file');
     if (file?.content) {
       if (isNano) {
         nano = [file.name, ...file.content];
+      } else if (isView && file.blogUrl) {
+        if (typeof window !== 'undefined') {
+          window.open(file.blogUrl, '_blank');
+        }
+        output = [];
       } else {
         output = file.content;
       }
     } else {
-      output = [`${isNano ? 'nano' : 'cat'}: ${target}: No such file`];
+      output = [`${isNano ? 'nano' : isView ? 'view' : 'cat'}: ${target}: No such file`];
     }
   } else if (trimmed === 'clear') {
     output = [];
