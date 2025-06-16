@@ -1,0 +1,16 @@
+export const ansibleNotes = [
+'First real-world DevOps project. Was clueless when I started.',
+'Learned:',
+'- What CI/CD *actually* means (not just pushing to GitHub)',
+'- Why containerization matters in shared environments',
+'- How Ansible can simplify even the most painful tasks',
+'',
+'  what_i_learned:',
+'- basic Ansible playbook structure',
+'- Docker + GitHub Container Registry usage',
+'- why containerization is critical in prod workflows',
+'',
+'Next steps:',
+'- Automate SSL (Certbot) + NGINX configs via Ansible',
+'- Auto-fetch compose + .env on pull to remove final manual step',
+];

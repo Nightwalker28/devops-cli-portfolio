@@ -1,0 +1,18 @@
+export const valid8Stack = [
+'backend:',
+'  framework: Flask',
+'  async_tasks: Celery',
+'  message_broker: Redis',
+'  containerized: true',
+'',
+'verification_layers:',
+'  - regex & syntax check',
+'  - domain & MX record validation',
+'  - SMTP pings',
+'  - Accept-all detection',
+'  - Risky/disposable domain flagging',
+'',
+'deployment:',
+'  host: On-premise Docker server',
+'  mode: Standalone microservice',
+];

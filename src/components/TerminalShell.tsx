@@ -5,25 +5,44 @@ import TerminalOutput from './TerminalOutput';
 import TerminalPrompt from './TerminalPrompt';
 import TerminalInput from './TerminalInput';
 import { processCommand, fileTree } from './CommandProcessor';
-import type { LsOutputItem } from './CommandProcessor';
+import type { CommandResult, LsOutputItem } from './CommandProcessor';
 import { getPromptString } from '@/utils/terminalUtils';
 import { linkify } from '@/utils/linkify';
 
 export type HistoryEntry =
   | { type: 'prompt'; id: string; cwd: string; command: string }
-  | { type: 'output'; id: string; lines: string[]; command?: string }
+  | { type: 'output'; id: string; lines: string[]; command?: string; isRawFileOutput?: boolean }
   | { type: 'ls'; id: string; items: LsOutputItem[]; path: string }
-  | { type: 'message'; id: string; text: string; isWelcome?: boolean };
+  | {
+      type: 'message';
+      id: string;
+      text?: string | string[]; // Can be a single line or multiple lines
+      isWelcome?: boolean; // imageUrl is no longer needed here for the watermark
+      // imageUrl?: string; // Removed as watermark is global
+      imageAlt?: string;
+    };
 
 const TerminalShell = () => {
   const [cwd, setCwd] = useState<string>('/');
-  const [history, setHistory] = useState<HistoryEntry[]>([
-    { type: 'message', id: 'intro1', text: 'This is a CLI-based portfolio project.', isWelcome: true },
-    { type: 'message', id: 'intro3', text: 'Click on file/folder names or use commands like `cd`, `ls`, `cat`, `view`, `nano`.', isWelcome: true },
-    { type: 'message', id: 'intro2', text: 'It\'s primarily designed for developers and best viewed on desktop/laptop devices.', isWelcome: true },
-    { type: 'message', id: 'intro-spacer', text: '', isWelcome: true }, // Optional spacer for separation
-    { type: 'message', id: 'welcome1help', text: 'Type `help` to get started.', isWelcome: true },
-  ]);
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    const initialEntries: HistoryEntry[] = [
+      {
+        type: 'message',
+        id: 'logo-image',
+        text: [ // All welcome text now part of this single message entry
+          "Welcome to my CLI Portfolio!",
+          "This is a CLI-based portfolio project.",
+          "Click on file/folder names or use commands like `cd`, `ls`, `cat`, `view`, `nano`.",
+          "It's primarily designed for developers and best viewed on desktop/laptop devices.",
+          "Type `help` to get started.",
+        ],
+        // imageUrl: '/acsiart.png', // Watermark is now handled globally
+        // imageAlt: 'Portfolio Logo',
+        isWelcome: true
+      }
+    ];
+    return initialEntries;
+  });
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [nanoContent, setNanoContent] = useState<string[] | null>(null);
 
@@ -65,7 +84,7 @@ const TerminalShell = () => {
 
   const handleCommand = async (input: string) => {
     const result = await processCommand(input, cwd);
-    const { outputLines, newCwd, nano, shouldClearHistory, lsItems } = result;
+    const { outputLines, newCwd, nano, shouldClearHistory, lsItems, isRawFileOutput } = result;
 
     if (shouldClearHistory) {
       setHistory([]); // Set history to an empty array to clear the screen
@@ -87,7 +106,13 @@ const TerminalShell = () => {
     if (lsItems && lsItems.length > 0) {
       nextHistoryEntries.push({ type: 'ls', id: commandId + '-ls', items: lsItems, path: cwd });
     } else if (outputLines && outputLines.length > 0) {
-      nextHistoryEntries.push({ type: 'output', id: commandId + '-output', lines: outputLines, command: input });
+      nextHistoryEntries.push({
+        type: 'output',
+        id: commandId + '-output',
+        lines: outputLines,
+        command: input,
+        isRawFileOutput: isRawFileOutput,
+      });
     }
 
     if (newCwd && newCwd !== cwd) {
@@ -152,8 +177,20 @@ const TerminalShell = () => {
   };
   return (
     <div
-      className="bg-black text-green-400 font-mono p-4 h-screen overflow-y-auto"
+      className="relative bg-black text-green-400 font-mono p-4 h-screen overflow-y-auto" // Added relative
     >
+      {/* Watermark Image */}
+      <img
+        src="/acsiart.png" // Path to your image in the public folder
+        alt="Watermark Logo"
+        className="
+          fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
+          max-w-[70%] max-h-[70%] w-auto h-auto 
+          opacity-40 hover:opacity-30 transition-opacity duration-300 ease-in-out 
+          pointer-events-none z-0 filter invert(1)
+        "
+      />
+
       {nanoContent ? (
         <div className="border border-green-400 p-4 mb-4">
           <div className="mb-2">-- NANO: {nanoContent[0]}</div>

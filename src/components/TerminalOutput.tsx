@@ -50,11 +50,12 @@ const TerminalOutput = ({ history, onItemClick }: TerminalOutputProps) => {
                   const isFile = item.type === 'file';
                   const isYaml = item.ext === 'yaml';
                   const isMd = item.ext === 'md';
+                  const isTxt = item.ext === 'txt';
+                  const isInf = item.ext === 'inf';
                   let colorClass = 'text-cyan-400'; // Default for folder
                   if (isFile) {
                     colorClass = (isYaml || isMd) ? 'text-yellow-400' : 'text-white';
                   }
-
                   return (
                     <span
                       key={`${entry.id}-item-${i}`}
@@ -68,17 +69,29 @@ const TerminalOutput = ({ history, onItemClick }: TerminalOutputProps) => {
               </div>
             );
           case 'output':
+            const outputColorClass = entry.isRawFileOutput ? 'text-white' : ''; // Default inherits terminal green
             return (
-              <div key={entry.id} className="whitespace-pre-wrap">
+              <div key={entry.id} className={`whitespace-pre-wrap ${outputColorClass}`}>
                 {entry.lines.map((line, i) => (
-                  renderLineWithLinks(line, `${entry.id}-line-${i}`)
+                  renderLineWithLinks(line, `${entry.id}-line-${i}`) // Links within will still be blue
                 ))}
               </div>
             );
           case 'message':
+            let containerClasses = "";
+            if (entry.isWelcome) {
+              containerClasses = "mb-2"; // Standard margin for welcome messages
+            }
+
+            // Watermark is global, so messages just render their text.
+            // The 'relative' positioning and margin for side-by-side image are removed.
             return (
-              <div key={entry.id} className={entry.isWelcome ? "mb-2" : ""}>
-                {entry.text}
+              <div key={entry.id} className={containerClasses}>
+                {Array.isArray(entry.text)
+                  ? entry.text.map((line, index) => renderLineWithLinks(line, `${entry.id}-txt-${index}`))
+                  : entry.text
+                  ? renderLineWithLinks(entry.text, `${entry.id}-txt-0`)
+                  : null}
               </div>
             );
           default:
