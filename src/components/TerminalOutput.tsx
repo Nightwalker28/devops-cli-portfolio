@@ -38,8 +38,11 @@ const TerminalOutput = ({ history, onItemClick }: TerminalOutputProps) => {
         switch (entry.type) {
           case 'prompt':
             return (
-              <div key={entry.id} className="flex">
-                <span className="pr-2">{getPromptString(entry.cwd)}</span>
+              <div key={entry.id} className="flex text-green-400"> {/* Ensure prompt line has consistent color */}
+                <span className="pr-2">
+                  {entry.customPromptText !== undefined ? entry.customPromptText :
+                   (entry.cwd ? getPromptString(entry.cwd) : '> ')}
+                </span>
                 <span>{entry.command}</span>
               </div>
             );

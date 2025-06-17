@@ -20,6 +20,7 @@ export const fileTree: Record<string, FileEntry[]> = {
     { name: 'projects', type: 'folder' },
     { name: 'blogs', type: 'folder' },
     {name: 'about_me.txt', type: 'file', ext: 'txt', content: aboutMeContent,},
+    {name: 'contact_me', type: 'file', ext: 'cmd'}, // No content needed, it's a command
     {name: 'resume.yaml', type: 'file', ext: 'yaml', content: resumeContent,},
   ],
   '/projects': [
@@ -50,6 +51,7 @@ export type CommandResult = {
   nano: string[] | null;
   shouldClearHistory?: boolean;
   isRawFileOutput?: boolean;
+  startContactMode?: boolean; // Signal to TerminalShell
 };
 
 const getFullPath = (currentDirectory: string, targetPath: string): string => {
@@ -88,12 +90,13 @@ export const processCommand = async (cmd: string, cwd: string): Promise<CommandR
 
   if (trimmed === 'help') {
     const helpEntries = [
-      { cmd: 'cd <dir>', desc: 'Change directory' },
+      { cmd: 'cd    <dir>', desc: 'Change directory' },
       { cmd: 'ls', desc: 'List directory contents' },
-      { cmd: 'cat <file>', desc: 'View file content' },
-      { cmd: 'nano <file>', desc: 'Open file in nano view' },
-      { cmd: 'view <file>', desc: 'Open file visually in browser' },
+      { cmd: 'cat   <file>', desc: 'View file content' },
+      { cmd: 'nano  <file>', desc: 'Open file in nano view' },
+      { cmd: 'view  <file>', desc: 'Open file visually in browser' },
       { cmd: 'clear', desc: 'Clear the screen' },
+      { cmd: 'contact', desc: 'Send me a message' },
       { cmd: 'help', desc: 'Show this help' },
     ];
 
@@ -239,6 +242,10 @@ export const processCommand = async (cmd: string, cwd: string): Promise<CommandR
       isRawFileOutput, // ensure all return paths include it
       shouldClearHistory: true,
     };
+  } else if (trimmed === 'contact_me') {
+    outputLines = ["Initiating contact sequence...", "You can type 'cancel' at any step to exit."];
+    return { outputLines, newCwd, nano, isRawFileOutput, shouldClearHistory, startContactMode: true };
+
   } else {
     outputLines = [`Command not found: ${cmd}`];
   }
